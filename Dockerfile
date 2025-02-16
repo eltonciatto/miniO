@@ -1,4 +1,4 @@
-FROM eltonciatto/miniO:latest
+FROM minio/minio:latest
 
 RUN chmod -R 777 /usr/bin
 
