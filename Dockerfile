@@ -1,7 +1,5 @@
 FROM minio/minio:latest
 
-RUN chmod -R 777 /usr/bin
-
 COPY ./minio /usr/bin/minio
 # Copia o script de entrada se ele realmente for necessário (opcional)
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
