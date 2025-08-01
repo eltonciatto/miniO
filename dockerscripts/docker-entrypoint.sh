@@ -31,21 +31,46 @@ mkdir -p /mnt/cache
 export MINIO_ROOT_USER=${MINIO_ROOT_USER:-"admin"}
 export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-"password"}
 
+# Configure MinIO domains and URLs based on environment variables
+if [ -n "${MINIO_DOMAIN}" ]; then
+    echo "Configuring MinIO with domains: ${MINIO_DOMAIN}"
+fi
+
+if [ -n "${MINIO_SERVER_URL}" ]; then
+    echo "MinIO Server URL: ${MINIO_SERVER_URL}"
+fi
+
+if [ -n "${MINIO_BROWSER_REDIRECT_URL}" ]; then
+    echo "MinIO Browser Redirect URL: ${MINIO_BROWSER_REDIRECT_URL}"
+fi
+
+# Build the MinIO command with proper arguments
+MINIO_CMD="minio server /data"
+
+# Add address binding for API (port 9000)
+MINIO_CMD="${MINIO_CMD} --address 0.0.0.0:9000"
+
+# Add console address binding (port 9001)
+MINIO_CMD="${MINIO_CMD} --console-address 0.0.0.0:9001"
+
 # Log startup information
 echo "Starting MinIO with the following configuration:"
 echo "- Data directory: /data"
 echo "- Root user: ${MINIO_ROOT_USER}"
 echo "- API address: 0.0.0.0:9000 (listening on all interfaces)"
 echo "- Console address: 0.0.0.0:9001 (listening on all interfaces)"
-if [ -n "${MINIO_DOMAIN}" ]; then
-    echo "- Domain: ${MINIO_DOMAIN}"
-fi
-if [ -n "${MINIO_SERVER_URL}" ]; then
-    echo "- Server URL: ${MINIO_SERVER_URL}"
-fi
-if [ -n "${MINIO_BROWSER_REDIRECT_URL}" ]; then
-    echo "- Browser Redirect URL: ${MINIO_BROWSER_REDIRECT_URL}"
-fi
+echo "- Command: ${MINIO_CMD}"
+
+# Print domain mappings
+echo ""
+echo "Expected Domain Mappings:"
+echo "- API Domains (port 9000):"
+echo "  * api-s3.sendbot.cloud"
+echo "  * midias-s3.sendbot.cloud" 
+echo "  * midias-s3-global.sendbot.cloud"
+echo "- Console Domain (port 9001):"
+echo "  * painel-s3.sendbot.cloud"
+echo ""
 
 docker_switch_user() {
 	if [ -n "${MINIO_USERNAME}" ] && [ -n "${MINIO_GROUPNAME}" ]; then
@@ -57,9 +82,10 @@ docker_switch_user() {
 			chroot --userspec=${MINIO_USERNAME}:${MINIO_GROUPNAME} / "$@"
 		fi
 	else
-		exec "$@"
+		# Execute the constructed MinIO command
+		exec ${MINIO_CMD}
 	fi
 }
 
-## Execute as root by default to handle permissions
-exec "$@"
+## Execute the MinIO command
+exec ${MINIO_CMD}

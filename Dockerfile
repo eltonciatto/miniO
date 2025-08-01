@@ -30,10 +30,12 @@ COPY --from=build /go/bin/minio /usr/bin/minio
 
 # Copia o script de entrada, se necessário
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY dockerscripts/minio-config.sh /usr/bin/minio-config.sh
 
 # Torna os arquivos executáveis
 RUN chmod +x /usr/bin/minio && \
-    chmod +x /usr/bin/docker-entrypoint.sh
+    chmod +x /usr/bin/docker-entrypoint.sh && \
+    chmod +x /usr/bin/minio-config.sh
 
 # Expõe as portas do MinIO
 EXPOSE 9000 9001
@@ -48,7 +50,5 @@ HEALTHCHECK --interval=30s --timeout=20s --start-period=3s --retries=3 \
 # Define o ponto de entrada (executará como root inicialmente)
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 
-# Inicia o servidor MinIO com a configuração correta
-# --address 0.0.0.0:9000 faz o MinIO escutar em todas as interfaces de rede
-# --console-address 0.0.0.0:9001 faz o console escutar em todas as interfaces
-CMD ["minio", "server", "/data", "--address", "0.0.0.0:9000", "--console-address", "0.0.0.0:9001"]
+# O comando é tratado pelo script de entrada
+CMD []
