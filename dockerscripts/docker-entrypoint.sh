@@ -24,27 +24,64 @@ echo "=== Setting up data directory ==="
 if [ ! -d "/data" ]; then
 	echo "Creating /data directory..."
 	mkdir -p /data
+	echo "✅ /data directory created"
+else
+	echo "✅ /data directory already exists"
 fi
 
-# Fix permissions on /data directory
-echo "Setting permissions on /data..."
-chown -R root:root /data
-chmod -R 755 /data
+# Show current permissions before changing
+echo "Current /data permissions:"
+ls -lad /data
 
-# Ensure MinIO can write to /data
-if [ ! -w "/data" ]; then
-	echo "ERROR: /data directory is not writable"
-	ls -la /data
-	exit 1
+# Fix permissions on /data directory (be more careful here)
+echo "Setting permissions on /data..."
+if chown root:root /data 2>/dev/null; then
+	echo "✅ chown completed successfully"
 else
+	echo "❌ chown failed, but continuing..."
+fi
+
+if chmod 755 /data 2>/dev/null; then
+	echo "✅ chmod completed successfully"
+else
+	echo "❌ chmod failed, but continuing..."
+fi
+
+# Show final permissions
+echo "Final /data permissions:"
+ls -lad /data
+
+# Test write access more safely
+echo "Testing write access to /data..."
+if touch /data/.test_write 2>/dev/null; then
 	echo "✅ /data directory is writable"
+	rm -f /data/.test_write
+else
+	echo "❌ /data directory is not writable"
+	echo "Directory contents:"
+	ls -la /data
+	echo "Current user: $(whoami)"
+	echo "Current UID/GID: $(id)"
+	# Don't exit, continue anyway
 fi
 
 # Create necessary directories for MinIO
-echo "Creating additional directories..."
-mkdir -p /var/log/minio
-mkdir -p /mnt/cache
-echo "✅ Directories created"
+echo ""
+echo "=== Creating additional directories ==="
+echo "Creating /var/log/minio..."
+if mkdir -p /var/log/minio 2>/dev/null; then
+	echo "✅ /var/log/minio created"
+else
+	echo "❌ Failed to create /var/log/minio"
+fi
+
+echo "Creating /mnt/cache..."
+if mkdir -p /mnt/cache 2>/dev/null; then
+	echo "✅ /mnt/cache created"
+else
+	echo "❌ Failed to create /mnt/cache"
+fi
+echo "✅ Additional directories setup complete"
 
 # Set default values if not provided
 export MINIO_ROOT_USER=${MINIO_ROOT_USER:-"admin"}

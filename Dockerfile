@@ -30,12 +30,14 @@ COPY --from=build /go/bin/minio /usr/bin/minio
 
 # Copia o script de entrada, se necessário
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY dockerscripts/docker-entrypoint-simple.sh /usr/bin/docker-entrypoint-simple.sh
 COPY dockerscripts/minio-config.sh /usr/bin/minio-config.sh
 COPY dockerscripts/debug-minio.sh /usr/bin/debug-minio.sh
 
 # Torna os arquivos executáveis
 RUN chmod +x /usr/bin/minio && \
     chmod +x /usr/bin/docker-entrypoint.sh && \
+    chmod +x /usr/bin/docker-entrypoint-simple.sh && \
     chmod +x /usr/bin/minio-config.sh && \
     chmod +x /usr/bin/debug-minio.sh
 
@@ -50,7 +52,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:9000/minio/health/live || curl -f http://localhost:9001/ || exit 1
 
 # Define o ponto de entrada (executará como root inicialmente)
-ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/docker-entrypoint-simple.sh"]
 
 # O comando é tratado pelo script de entrada
 CMD []
