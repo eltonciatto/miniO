@@ -23,7 +23,7 @@ RUN go build -tags kqueue -o /go/bin/minio .
 FROM alpine:latest
 
 # Instala certificados CA, timezone data e curl para health check
-RUN apk --no-cache add ca-certificates tzdata curl
+RUN apk --no-cache add ca-certificates tzdata curl net-tools procps iproute2
 
 # Copia o binário compilado
 COPY --from=build /go/bin/minio /usr/bin/minio
@@ -31,11 +31,13 @@ COPY --from=build /go/bin/minio /usr/bin/minio
 # Copia o script de entrada, se necessário
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY dockerscripts/minio-config.sh /usr/bin/minio-config.sh
+COPY dockerscripts/debug-minio.sh /usr/bin/debug-minio.sh
 
 # Torna os arquivos executáveis
 RUN chmod +x /usr/bin/minio && \
     chmod +x /usr/bin/docker-entrypoint.sh && \
-    chmod +x /usr/bin/minio-config.sh
+    chmod +x /usr/bin/minio-config.sh && \
+    chmod +x /usr/bin/debug-minio.sh
 
 # Expõe as portas do MinIO
 EXPOSE 9000 9001
@@ -43,9 +45,9 @@ EXPOSE 9000 9001
 # Define o volume onde os dados serão armazenados
 VOLUME ["/data"]
 
-# Adiciona health check
-HEALTHCHECK --interval=30s --timeout=20s --start-period=3s --retries=3 \
-    CMD curl -f http://localhost:9000/minio/health/live || exit 1
+# Adiciona health check simples
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9000/minio/health/live || curl -f http://localhost:9001/ || exit 1
 
 # Define o ponto de entrada (executará como root inicialmente)
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]

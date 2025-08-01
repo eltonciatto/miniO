@@ -1,6 +1,17 @@
 #!/bin/sh
 #
 
+echo "=== MinIO Docker Entry Point Debug ==="
+echo "Date: $(date)"
+echo "User: $(whoami)"
+echo "Working directory: $(pwd)"
+echo ""
+
+# Show all environment variables starting with MINIO_
+echo "=== MinIO Environment Variables ==="
+env | grep "^MINIO_" | sort
+echo ""
+
 # If command starts with an option, prepend minio.
 if [ "${1}" != "minio" ]; then
 	if [ -n "${1}" ]; then
@@ -9,83 +20,80 @@ if [ "${1}" != "minio" ]; then
 fi
 
 # Ensure /data directory exists and has correct permissions
+echo "=== Setting up data directory ==="
 if [ ! -d "/data" ]; then
+	echo "Creating /data directory..."
 	mkdir -p /data
 fi
 
 # Fix permissions on /data directory
+echo "Setting permissions on /data..."
 chown -R root:root /data
 chmod -R 755 /data
 
 # Ensure MinIO can write to /data
 if [ ! -w "/data" ]; then
-	echo "Error: /data directory is not writable"
+	echo "ERROR: /data directory is not writable"
+	ls -la /data
 	exit 1
+else
+	echo "✅ /data directory is writable"
 fi
 
 # Create necessary directories for MinIO
+echo "Creating additional directories..."
 mkdir -p /var/log/minio
 mkdir -p /mnt/cache
+echo "✅ Directories created"
 
 # Set default values if not provided
 export MINIO_ROOT_USER=${MINIO_ROOT_USER:-"admin"}
 export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-"password"}
 
-# Configure MinIO domains and URLs based on environment variables
-if [ -n "${MINIO_DOMAIN}" ]; then
-    echo "Configuring MinIO with domains: ${MINIO_DOMAIN}"
-fi
-
-if [ -n "${MINIO_SERVER_URL}" ]; then
-    echo "MinIO Server URL: ${MINIO_SERVER_URL}"
-fi
-
-if [ -n "${MINIO_BROWSER_REDIRECT_URL}" ]; then
-    echo "MinIO Browser Redirect URL: ${MINIO_BROWSER_REDIRECT_URL}"
-fi
-
-# Build the MinIO command with proper arguments
-MINIO_CMD="minio server /data"
-
-# Add address binding for API (port 9000)
-MINIO_CMD="${MINIO_CMD} --address 0.0.0.0:9000"
-
-# Add console address binding (port 9001)
-MINIO_CMD="${MINIO_CMD} --console-address 0.0.0.0:9001"
-
-# Log startup information
-echo "Starting MinIO with the following configuration:"
-echo "- Data directory: /data"
-echo "- Root user: ${MINIO_ROOT_USER}"
-echo "- API address: 0.0.0.0:9000 (listening on all interfaces)"
-echo "- Console address: 0.0.0.0:9001 (listening on all interfaces)"
-echo "- Command: ${MINIO_CMD}"
-
-# Print domain mappings
 echo ""
-echo "Expected Domain Mappings:"
-echo "- API Domains (port 9000):"
-echo "  * api-s3.sendbot.cloud"
-echo "  * midias-s3.sendbot.cloud" 
-echo "  * midias-s3-global.sendbot.cloud"
-echo "- Console Domain (port 9001):"
-echo "  * painel-s3.sendbot.cloud"
+echo "=== MinIO Configuration ==="
+echo "Root User: ${MINIO_ROOT_USER}"
+echo "Root Password: ${MINIO_ROOT_PASSWORD:+***SET***}"
+echo "Domain: ${MINIO_DOMAIN:-"Not set"}"
+echo "Server URL: ${MINIO_SERVER_URL:-"Not set"}"
+echo "Browser Redirect: ${MINIO_BROWSER_REDIRECT_URL:-"Not set"}"
 echo ""
 
-docker_switch_user() {
-	if [ -n "${MINIO_USERNAME}" ] && [ -n "${MINIO_GROUPNAME}" ]; then
-		if [ -n "${MINIO_UID}" ] && [ -n "${MINIO_GID}" ]; then
-			chroot --userspec=${MINIO_UID}:${MINIO_GID} / "$@"
-		else
-			echo "${MINIO_USERNAME}:x:1000:1000:${MINIO_USERNAME}:/:/sbin/nologin" >>/etc/passwd
-			echo "${MINIO_GROUPNAME}:x:1000" >>/etc/group
-			chroot --userspec=${MINIO_USERNAME}:${MINIO_GROUPNAME} / "$@"
-		fi
+# Test if minio binary exists and is executable
+echo "=== Checking MinIO Binary ==="
+if [ -f "/usr/bin/minio" ]; then
+	echo "✅ MinIO binary found at /usr/bin/minio"
+	if [ -x "/usr/bin/minio" ]; then
+		echo "✅ MinIO binary is executable"
+		echo "MinIO version: $(/usr/bin/minio --version 2>/dev/null || echo 'Version check failed')"
 	else
-		# Execute the constructed MinIO command
-		exec ${MINIO_CMD}
+		echo "❌ MinIO binary is not executable"
+		ls -la /usr/bin/minio
 	fi
-}
+else
+	echo "❌ MinIO binary not found"
+	ls -la /usr/bin/
+	exit 1
+fi
 
-## Execute the MinIO command
+# Build the MinIO command
+echo ""
+echo "=== Building MinIO Command ==="
+MINIO_CMD="/usr/bin/minio server /data --address 0.0.0.0:9000 --console-address 0.0.0.0:9001"
+
+echo "Command to execute: ${MINIO_CMD}"
+echo ""
+
+# Test network connectivity
+echo "=== Network Test ==="
+echo "Available network interfaces:"
+ip addr show 2>/dev/null || ifconfig 2>/dev/null || echo "Network tools not available"
+echo ""
+
+echo "=== Starting MinIO ==="
+echo "Executing: ${MINIO_CMD}"
+echo "Logs will appear below..."
+echo "=================================="
+
+# Execute MinIO with full logging
 exec ${MINIO_CMD}
