@@ -84,6 +84,12 @@ MINIO_CMD="/usr/bin/minio server /data --address 0.0.0.0:9000 --console-address 
 echo "Command to execute: ${MINIO_CMD}"
 echo ""
 
+# Test if we can execute minio version first
+echo "=== Testing MinIO Execution ==="
+echo "Testing 'minio --version':"
+/usr/bin/minio --version || echo "❌ Failed to get MinIO version"
+echo ""
+
 # Test network connectivity
 echo "=== Network Test ==="
 echo "Available network interfaces:"
@@ -95,5 +101,24 @@ echo "Executing: ${MINIO_CMD}"
 echo "Logs will appear below..."
 echo "=================================="
 
-# Execute MinIO with full logging
-exec ${MINIO_CMD}
+# Try to execute MinIO and capture any immediate errors
+echo "Attempting to start MinIO..."
+${MINIO_CMD} &
+MINIO_PID=$!
+
+# Wait a bit and check if it's still running
+sleep 5
+if kill -0 $MINIO_PID 2>/dev/null; then
+    echo "✅ MinIO process started successfully (PID: $MINIO_PID)"
+    echo "Waiting for MinIO to be ready..."
+    
+    # Wait for MinIO and show its output
+    wait $MINIO_PID
+else
+    echo "❌ MinIO process failed to start or crashed immediately"
+    echo "Trying alternative startup method..."
+    
+    # Try simpler command as fallback
+    echo "Fallback: Starting with minimal configuration..."
+    exec /usr/bin/minio server /data
+fi
