@@ -1,4 +1,4 @@
-FROM minio/minio:RELEASE.2025-02-28T09-55-16Z
+FROM minio/minio:RELEASE.2025-04-22T22-12-26Z
 
 # Copia o script de entrada, se necessário
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
