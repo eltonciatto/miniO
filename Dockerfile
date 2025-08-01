@@ -23,9 +23,7 @@ RUN go build -tags kqueue -o /go/bin/minio .
 FROM alpine:latest
 
 # Instala certificados CA e timezone data
-RUN apk --no-cache add ca-certificates tzdata && \
-    addgroup -g 1000 minio && \
-    adduser -D -u 1000 -G minio minio
+RUN apk --no-cache add ca-certificates tzdata
 
 # Copia o binário compilado
 COPY --from=build /go/bin/minio /usr/bin/minio
@@ -37,16 +35,13 @@ COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 RUN chmod +x /usr/bin/minio && \
     chmod +x /usr/bin/docker-entrypoint.sh
 
-# Define o usuário
-USER minio
-
 # Expõe as portas do MinIO
 EXPOSE 9000 9001
 
 # Define o volume onde os dados serão armazenados
 VOLUME ["/data"]
 
-# Define o ponto de entrada
+# Define o ponto de entrada (executará como root inicialmente)
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 
 # Inicia o servidor MinIO com a configuração correta

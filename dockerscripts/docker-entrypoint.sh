@@ -8,6 +8,21 @@ if [ "${1}" != "minio" ]; then
 	fi
 fi
 
+# Ensure /data directory exists and has correct permissions
+if [ ! -d "/data" ]; then
+	mkdir -p /data
+fi
+
+# Fix permissions on /data directory
+chown -R root:root /data
+chmod -R 755 /data
+
+# Ensure MinIO can write to /data
+if [ ! -w "/data" ]; then
+	echo "Error: /data directory is not writable"
+	exit 1
+fi
+
 docker_switch_user() {
 	if [ -n "${MINIO_USERNAME}" ] && [ -n "${MINIO_GROUPNAME}" ]; then
 		if [ -n "${MINIO_UID}" ] && [ -n "${MINIO_GID}" ]; then
@@ -22,5 +37,5 @@ docker_switch_user() {
 	fi
 }
 
-## DEPRECATED and unsupported - switch to user if applicable.
-docker_switch_user "$@"
+## Execute as root by default to handle permissions
+exec "$@"
