@@ -23,6 +23,30 @@ if [ ! -w "/data" ]; then
 	exit 1
 fi
 
+# Create necessary directories for MinIO
+mkdir -p /var/log/minio
+mkdir -p /mnt/cache
+
+# Set default values if not provided
+export MINIO_ROOT_USER=${MINIO_ROOT_USER:-"admin"}
+export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-"password"}
+
+# Log startup information
+echo "Starting MinIO with the following configuration:"
+echo "- Data directory: /data"
+echo "- Root user: ${MINIO_ROOT_USER}"
+echo "- API address: 0.0.0.0:9000 (listening on all interfaces)"
+echo "- Console address: 0.0.0.0:9001 (listening on all interfaces)"
+if [ -n "${MINIO_DOMAIN}" ]; then
+    echo "- Domain: ${MINIO_DOMAIN}"
+fi
+if [ -n "${MINIO_SERVER_URL}" ]; then
+    echo "- Server URL: ${MINIO_SERVER_URL}"
+fi
+if [ -n "${MINIO_BROWSER_REDIRECT_URL}" ]; then
+    echo "- Browser Redirect URL: ${MINIO_BROWSER_REDIRECT_URL}"
+fi
+
 docker_switch_user() {
 	if [ -n "${MINIO_USERNAME}" ] && [ -n "${MINIO_GROUPNAME}" ]; then
 		if [ -n "${MINIO_UID}" ] && [ -n "${MINIO_GID}" ]; then

@@ -22,8 +22,8 @@ RUN go build -tags kqueue -o /go/bin/minio .
 # Estágio final - imagem mínima para produção
 FROM alpine:latest
 
-# Instala certificados CA e timezone data
-RUN apk --no-cache add ca-certificates tzdata
+# Instala certificados CA, timezone data e curl para health check
+RUN apk --no-cache add ca-certificates tzdata curl
 
 # Copia o binário compilado
 COPY --from=build /go/bin/minio /usr/bin/minio
@@ -41,8 +41,14 @@ EXPOSE 9000 9001
 # Define o volume onde os dados serão armazenados
 VOLUME ["/data"]
 
+# Adiciona health check
+HEALTHCHECK --interval=30s --timeout=20s --start-period=3s --retries=3 \
+    CMD curl -f http://localhost:9000/minio/health/live || exit 1
+
 # Define o ponto de entrada (executará como root inicialmente)
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 
 # Inicia o servidor MinIO com a configuração correta
-CMD ["minio", "server", "/data", "--console-address", ":9001"]
+# --address 0.0.0.0:9000 faz o MinIO escutar em todas as interfaces de rede
+# --console-address 0.0.0.0:9001 faz o console escutar em todas as interfaces
+CMD ["minio", "server", "/data", "--address", "0.0.0.0:9000", "--console-address", "0.0.0.0:9001"]
